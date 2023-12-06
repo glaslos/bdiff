@@ -13,7 +13,7 @@ import (
 )
 
 type Block struct {
-	Start, End uint64
+	Start, End uint32
 	Checksum32 uint32
 	Sha256hash [sha256.Size]byte
 	HasData    bool
@@ -36,7 +36,7 @@ func addBlock(f *Fingerprint, b Block) {
 func NewFingerprint(src io.Reader, blockSize uint32) (Fingerprint, error) {
 	buf := make([]byte, blockSize)
 
-	n, start := 0, uint64(0)
+	n, start := 0, uint32(0)
 
 	var (
 		err   error
@@ -52,7 +52,7 @@ func NewFingerprint(src io.Reader, blockSize uint32) (Fingerprint, error) {
 		n, err = src.Read(buf)
 		block = Block{
 			Start:      start,
-			End:        start + uint64(n),
+			End:        start + uint32(n),
 			Checksum32: adler32.Checksum(buf[0:n]),
 			Sha256hash: sha256.Sum256(buf[0:n]),
 		}
