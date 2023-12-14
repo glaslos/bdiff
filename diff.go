@@ -37,20 +37,21 @@ func processRolling(r io.Reader, index uint32, fileSize uint32, f Fingerprint, d
 	diff := *delta
 	db := &diff[len(diff)-1]
 
-	var b []byte
+	b := []byte{}
 	bw := bytes.NewBuffer(b)
 	_, err := h.WriteWindow(bw)
 	if err != nil {
 		return processingResult{}, err
 	}
 
-	bufferSize := fileSize - (index + uint32(len(b)))
+	bufferSize := fileSize - (index + uint32(bw.Len()))
 	if bufferSize == 0 {
 		db.RawBytes = append(db.RawBytes, b...)
 		*delta = diff
 		return processingResult{false, Block{}, index, 0, true}, nil
 	}
-	fb := b[0]
+
+	fb := bw.Bytes()[0]
 	db.RawBytes = append(db.RawBytes, fb)
 
 	buf := make([]byte, 1)
@@ -66,8 +67,8 @@ func processRolling(r io.Reader, index uint32, fileSize uint32, f Fingerprint, d
 	if err != nil {
 		return processingResult{}, err
 	}
-	matchblock, matched := matchesBlock(h.Sum32(), sha256.Sum256(b), f)
-	return processingResult{matched, matchblock, index, n, false}, nil
+	block, matched := matchesBlock(h.Sum32(), sha256.Sum256(bw.Bytes()), f)
+	return processingResult{matched, block, index, n, false}, nil
 }
 
 func processBlock(r io.Reader, index uint32, fileSize uint32, f Fingerprint, delta *[]Block, h hash.Hash32) (processingResult, error) {
@@ -119,7 +120,7 @@ func Diff(r io.Reader, fileSize uint32, f Fingerprint) ([]Block, error) {
 				index += uint32(result.consumed)
 				continue
 			}
-			delta = append(delta, Block{HasData: true, Start: index})
+			delta = append(delta, Block{HasData: true, Start: index, End: index + uint32(result.consumed)})
 			blockMode = false
 		}
 		result, err = processRolling(r, index, fileSize, f, &delta, h)

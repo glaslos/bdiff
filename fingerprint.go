@@ -25,14 +25,6 @@ type Fingerprint struct {
 	Blocks    map[uint32]map[[sha256.Size]byte]Block
 }
 
-func addBlock(f *Fingerprint, b Block) {
-	if sha2blk := f.Blocks[b.Checksum32]; sha2blk == nil {
-		f.Blocks[b.Checksum32] = make(map[[sha256.Size]byte]Block)
-	}
-	f.Blocks[b.Checksum32][b.Sha256hash] = b
-
-}
-
 func NewFingerprint(src io.Reader, blockSize uint32) (Fingerprint, error) {
 	buf := make([]byte, blockSize)
 
@@ -56,7 +48,12 @@ func NewFingerprint(src io.Reader, blockSize uint32) (Fingerprint, error) {
 			Checksum32: adler32.Checksum(buf[0:n]),
 			Sha256hash: sha256.Sum256(buf[0:n]),
 		}
-		addBlock(&fingerprint, block)
+
+		if sha2blk := fingerprint.Blocks[block.Checksum32]; sha2blk == nil {
+			fingerprint.Blocks[block.Checksum32] = make(map[[sha256.Size]byte]Block)
+		}
+		fingerprint.Blocks[block.Checksum32][block.Sha256hash] = block
+
 		start = block.End
 		if err != nil {
 			if err == io.EOF {
@@ -64,8 +61,6 @@ func NewFingerprint(src io.Reader, blockSize uint32) (Fingerprint, error) {
 			} else {
 				return fingerprint, err
 			}
-
 		}
-
 	}
 }
