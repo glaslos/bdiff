@@ -18,4 +18,7 @@ func TestNewFingerprint(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint32(12), fp.BlockSize)
 	require.NotEmpty(t, fp.Blocks)
+
+	fp.String()
+	require.Equal(t, "", 1)
 }

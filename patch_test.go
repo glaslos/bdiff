@@ -13,7 +13,7 @@ func TestPatch(t *testing.T) {
 	p2 := []byte("the lazy cat sleeps in the sun")
 
 	src := bytes.NewReader(p1)
-	fp, err := NewFingerprint(src, 4)
+	fp, err := NewFingerprint(src, 1)
 	require.NoError(t, err)
 
 	dst := bytes.NewBuffer(p2)

@@ -11,7 +11,7 @@ import (
 )
 
 // Patch the delta from the source to the destination
-func Patch(delta []Block, src io.ReadSeeker, dst io.Writer) error {
+func Patch(delta Delta, src io.ReadSeeker, dst io.Writer) error {
 	for _, block := range delta {
 		if block.HasData {
 			if _, err := dst.Write(block.RawBytes); err != nil {

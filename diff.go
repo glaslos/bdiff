@@ -33,7 +33,7 @@ func matchesBlock(checksum uint32, sha256 [sha256.Size]byte, s Fingerprint) (Blo
 
 }
 
-func processRolling(r io.Reader, index uint32, fileSize uint32, f Fingerprint, delta *[]Block, h *adler32.Adler32) (processingResult, error) {
+func processRolling(r io.Reader, index uint32, fileSize uint32, f Fingerprint, delta *Delta, h *adler32.Adler32) (processingResult, error) {
 	diff := *delta
 	db := &diff[len(diff)-1]
 
@@ -71,7 +71,7 @@ func processRolling(r io.Reader, index uint32, fileSize uint32, f Fingerprint, d
 	return processingResult{matched, block, index, n, false}, nil
 }
 
-func processBlock(r io.Reader, index uint32, fileSize uint32, f Fingerprint, delta *[]Block, h hash.Hash32) (processingResult, error) {
+func processBlock(r io.Reader, index uint32, fileSize uint32, f Fingerprint, delta *Delta, h hash.Hash32) (processingResult, error) {
 	buffSize := f.BlockSize
 	if (index + f.BlockSize) > fileSize {
 		buffSize = fileSize - index
@@ -95,9 +95,9 @@ func processBlock(r io.Reader, index uint32, fileSize uint32, f Fingerprint, del
 
 }
 
-func Diff(r io.Reader, fileSize uint32, f Fingerprint) ([]Block, error) {
+func Diff(r io.Reader, fileSize uint32, f Fingerprint) (Delta, error) {
 	var (
-		delta     []Block
+		delta     Delta
 		index     uint32
 		result    processingResult
 		blockMode bool
