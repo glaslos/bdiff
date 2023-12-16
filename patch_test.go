@@ -2,7 +2,6 @@ package bdiff
 
 import (
 	"bytes"
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,16 +12,13 @@ func TestPatch(t *testing.T) {
 	p2 := []byte("the lazy cat sleeps in the sun")
 
 	src := bytes.NewReader(p1)
-	fp, err := NewFingerprint(src, 1)
+	fp, err := NewFingerprint(src, 4)
 	require.NoError(t, err)
 
 	dst := bytes.NewBuffer(p2)
-	diff, err := Diff(dst, uint32(len(p2)), fp)
+	diff, err := Diff(dst, len(p2), fp)
 	require.NoError(t, err)
 	require.NotEmpty(t, diff)
-
-	_, err = src.Seek(0, io.SeekStart)
-	require.NoError(t, err)
 
 	err = Patch(diff, src, dst)
 	require.NoError(t, err)

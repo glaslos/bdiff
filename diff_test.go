@@ -16,7 +16,11 @@ func TestDiff(t *testing.T) {
 	require.NoError(t, err)
 
 	src2 := bytes.NewBuffer(p2)
-	diff, err := Diff(src2, uint32(len(p2)), fp)
+	diff, err := Diff(src2, len(src2.Bytes()), fp)
 	require.NoError(t, err)
 	require.NotEmpty(t, diff)
+
 }
+
+// the lazy c a t   s l e e p s   i n   t h e   s u n
+// 123456789101112131415161718192021222324252627282930

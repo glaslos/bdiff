@@ -15,7 +15,7 @@ import (
 func NewFingerprint(src io.Reader, blockSize uint32) (Fingerprint, error) {
 	var (
 		n     int
-		start uint32
+		index uint32
 		err   error
 		block Block
 	)
@@ -30,10 +30,11 @@ func NewFingerprint(src io.Reader, blockSize uint32) (Fingerprint, error) {
 		n, err = src.Read(buf)
 		if n != 0 {
 			block = Block{
-				Start:      start,
-				End:        start + uint32(n),
+				Start:      index,
+				End:        index + uint32(n),
 				Checksum32: adler32.Checksum(buf[0:n]),
 				Sha256hash: sha256.Sum256(buf[0:n]),
+				String:     string(buf[0:n]),
 			}
 
 			if ok := fingerprint.Blocks[block.Checksum32]; ok == nil {
@@ -41,7 +42,7 @@ func NewFingerprint(src io.Reader, blockSize uint32) (Fingerprint, error) {
 			}
 			fingerprint.Blocks[block.Checksum32][block.Sha256hash] = block
 
-			start = block.End
+			index = block.End
 		}
 		if err != nil {
 			if err == io.EOF {

@@ -9,7 +9,7 @@ package bdiff
 import (
 	"bytes"
 	"crypto/sha256"
-	"hash"
+	"fmt"
 	"io"
 
 	"github.com/chmduquesne/rollinghash/adler32"
@@ -23,8 +23,8 @@ type processingResult struct {
 	eof          bool
 }
 
-func matchesBlock(checksum uint32, sha256 [sha256.Size]byte, s Fingerprint) (Block, bool) {
-	if sha2blk, ok := s.Blocks[checksum]; ok {
+func matchesBlock(checksum uint32, sha256 [sha256.Size]byte, fp Fingerprint) (Block, bool) {
+	if sha2blk, ok := fp.Blocks[checksum]; ok {
 		if block, m := sha2blk[sha256]; m {
 			return block, true
 		}
@@ -33,7 +33,7 @@ func matchesBlock(checksum uint32, sha256 [sha256.Size]byte, s Fingerprint) (Blo
 
 }
 
-func processRolling(r io.Reader, index uint32, fileSize uint32, f Fingerprint, delta *Delta, h *adler32.Adler32) (processingResult, error) {
+func processRolling(r io.Reader, index uint32, fileSize int, f Fingerprint, delta *Delta, h *adler32.Adler32) (processingResult, error) {
 	diff := *delta
 	db := &diff[len(diff)-1]
 
@@ -44,7 +44,7 @@ func processRolling(r io.Reader, index uint32, fileSize uint32, f Fingerprint, d
 		return processingResult{}, err
 	}
 
-	bufferSize := fileSize - (index + uint32(bw.Len()))
+	bufferSize := uint32(fileSize) - (index + uint32(bw.Len()))
 	if bufferSize == 0 {
 		db.RawBytes = append(db.RawBytes, b...)
 		*delta = diff
@@ -71,45 +71,47 @@ func processRolling(r io.Reader, index uint32, fileSize uint32, f Fingerprint, d
 	return processingResult{matched, block, index, n, false}, nil
 }
 
-func processBlock(r io.Reader, index uint32, fileSize uint32, f Fingerprint, delta *Delta, h hash.Hash32) (processingResult, error) {
-	buffSize := f.BlockSize
-	if (index + f.BlockSize) > fileSize {
-		buffSize = fileSize - index
+func processBlock(src io.Reader, index uint32, fileSize int, fp Fingerprint, delta *Delta) (processingResult, *adler32.Adler32, error) {
+	h := adler32.New()
+	buffSize := fp.BlockSize
+	if (index + fp.BlockSize) > uint32(fileSize) {
+		buffSize = uint32(fileSize) - index
 	}
+
 	if buffSize == 0 {
-		return processingResult{false, Block{}, index, 0, true}, nil
+		return processingResult{false, Block{}, index, 0, true}, h, nil
 	}
 
 	buf := make([]byte, buffSize)
-	if _, err := io.ReadFull(r, buf); err != nil {
-		return processingResult{}, err
+	if _, err := io.ReadFull(src, buf); err != nil {
+		return processingResult{}, nil, fmt.Errorf("failed to read block: %w", err)
 	}
 
-	n, err := h.Write(buf)
+	_, err := h.Write(buf)
 	if err != nil {
-		return processingResult{}, err
+		return processingResult{}, nil, err
 	}
 
-	block, matched := matchesBlock(h.Sum32(), sha256.Sum256(buf), f)
-	return processingResult{matched, block, index, n, false}, nil
+	block, matched := matchesBlock(h.Sum32(), sha256.Sum256(buf), fp)
+	return processingResult{matched, block, index, int(buffSize), false}, h, nil
 
 }
 
-func Diff(r io.Reader, fileSize uint32, f Fingerprint) (Delta, error) {
+func Diff(src io.Reader, fileSize int, f Fingerprint) (Delta, error) {
 	var (
 		delta     Delta
 		index     uint32
 		result    processingResult
 		blockMode bool
 		err       error
+		h         *adler32.Adler32
 	)
-	h := adler32.New()
 	blockMode = true
 	for {
 		if blockMode {
-			result, err = processBlock(r, index, fileSize, f, &delta, h)
+			result, h, err = processBlock(src, index, fileSize, f, &delta)
 			if err != nil {
-				return delta, err
+				return delta, fmt.Errorf("failed to process block: %w", err)
 			}
 			index = result.index
 			if result.eof {
@@ -120,21 +122,20 @@ func Diff(r io.Reader, fileSize uint32, f Fingerprint) (Delta, error) {
 				index += uint32(result.consumed)
 				continue
 			}
-			delta = append(delta, Block{HasData: true, Start: index, End: index + uint32(result.consumed)})
+			delta = append(delta, Block{HasData: true, Start: index})
 			blockMode = false
 		}
-		result, err = processRolling(r, index, fileSize, f, &delta, h)
+		result, err = processRolling(src, index, fileSize, f, &delta, h)
 		if err != nil {
 			return nil, err
 		}
-		index = result.index
+		index = result.index + uint32(result.consumed)
 
 		if result.eof {
 			return delta, nil
 		}
 		if result.blockMatch {
 			delta = append(delta, result.matchedBlock)
-			index += uint32(result.consumed)
 			blockMode = true
 			continue
 		}
