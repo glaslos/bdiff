@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/glaslos/bdiff"
 	"github.com/urfave/cli/v3"
 )
 
@@ -17,14 +18,41 @@ func main() {
 			{
 				Name:  "fingerprint",
 				Usage: "create a fingerprint for the input file",
-				Action: func(context.Context, *cli.Command) error {
-					fmt.Println("boom! I say!")
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "file",
+						Aliases: []string{"f"},
+						Usage:   "Create fingerprint from `FILE`",
+					},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					fh, err := os.Open(cmd.String("file"))
+					if err != nil {
+						return err
+					}
+					fp, err := bdiff.NewFingerprint(fh, 24)
+					if err != nil {
+						return err
+					}
+					fp.Print()
 					return nil
 				},
 			},
 			{
 				Name:  "diff",
 				Usage: "create a diff from two files or a fingerprint",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "source",
+						Aliases: []string{"s"},
+						Usage:   "Diff from `FILE`",
+					},
+					&cli.StringFlag{
+						Name:    "destination",
+						Aliases: []string{"d"},
+						Usage:   "Diff to `FILE`",
+					},
+				},
 				Action: func(context.Context, *cli.Command) error {
 					fmt.Println("boom! I say!")
 					return nil
