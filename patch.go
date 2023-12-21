@@ -7,6 +7,7 @@
 package bdiff
 
 import (
+	"fmt"
 	"io"
 )
 
@@ -15,15 +16,15 @@ func Patch(delta Delta, src io.ReadSeeker, dst io.Writer) error {
 	for _, block := range delta {
 		if block.HasData {
 			if _, err := dst.Write(block.RawBytes); err != nil {
-				return err
+				return fmt.Errorf("failed to write block: %w", err)
 			}
 		} else {
 			if _, err := src.Seek(int64(block.Start), io.SeekStart); err != nil {
-				return err
+				return fmt.Errorf("failed to seek source: %w", err)
 			}
 
 			if _, err := io.CopyN(dst, src, int64(block.End-block.Start)); err != nil {
-				return err
+				return fmt.Errorf("failed to copy block: %w", err)
 			}
 		}
 	}
