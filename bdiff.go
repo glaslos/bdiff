@@ -11,11 +11,10 @@ type Block struct {
 	Sha256hash [sha256.Size]byte
 	HasData    bool
 	RawBytes   []byte
-	String     string
 }
 
 func (b *Block) Print() {
-	fmt.Printf("\t%d:%d: %v: %x\t%s\n", b.Start, b.End, b.HasData, b.Checksum32, b.String)
+	fmt.Printf("\t%d:%d: %v: %x\t%x\n", b.Start, b.End, b.HasData, b.Checksum32, b.RawBytes)
 }
 
 type Delta []Block

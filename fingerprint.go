@@ -34,7 +34,6 @@ func NewFingerprint(src io.Reader, blockSize uint32) (Fingerprint, error) {
 				End:        index + uint32(n),
 				Checksum32: adler32.Checksum(buf[0:n]),
 				Sha256hash: sha256.Sum256(buf[0:n]),
-				String:     string(buf[0:n]),
 			}
 
 			if ok := fingerprint.Blocks[block.Checksum32]; ok == nil {
