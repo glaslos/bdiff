@@ -28,23 +28,6 @@ func NewFingerprint(src io.Reader, blockSize uint32) (Fingerprint, error) {
 	buf := make([]byte, blockSize)
 	for {
 		n, err = src.Read(buf)
-		if n != 0 {
-			block = Block{
-				Start:      index,
-				End:        index + uint32(n),
-				Checksum32: adler32.Checksum(buf[0:n]),
-				Sha256hash: sha256.Sum256(buf[0:n]),
-				HasData:    true,
-				RawBytes:   buf[0:n],
-			}
-
-			if ok := fingerprint.Blocks[block.Checksum32]; ok == nil {
-				fingerprint.Blocks[block.Checksum32] = make(map[[sha256.Size]byte]Block)
-			}
-			fingerprint.Blocks[block.Checksum32][block.Sha256hash] = block
-
-			index = block.End
-		}
 		if err != nil {
 			if err == io.EOF {
 				return fingerprint, nil
@@ -52,5 +35,21 @@ func NewFingerprint(src io.Reader, blockSize uint32) (Fingerprint, error) {
 				return fingerprint, err
 			}
 		}
+
+		block = Block{
+			Start:      index,
+			End:        index + uint32(n),
+			Checksum32: adler32.Checksum(buf[0:n]),
+			Sha256hash: sha256.Sum256(buf[0:n]),
+			HasData:    true,
+			RawBytes:   buf[0:n],
+		}
+
+		if ok := fingerprint.Blocks[block.Checksum32]; ok == nil {
+			fingerprint.Blocks[block.Checksum32] = make(map[[sha256.Size]byte]Block)
+		}
+		fingerprint.Blocks[block.Checksum32][block.Sha256hash] = block
+
+		index = block.End
 	}
 }
